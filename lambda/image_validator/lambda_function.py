@@ -6,10 +6,12 @@ s3 = boto3.client('s3')
 
 VALID_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
 
+
 def is_valid_image(key):
     """check if the file has a valid image extension."""
     _, ext = os.path.splitext(key.lower())
     return ext in VALID_EXTENSIONS
+
 
 def lambda_handler(event, context):
     """
@@ -42,13 +44,27 @@ def lambda_handler(event, context):
     print("=== image validator invoked ===")
 
     # todo: loop through event['Records']
-    # todo: for each record, get the SNS message string from record['Sns']['Message']
+    for record in event['Records']:
+        # todo: for each record, get the SNS message string from record['Sns']['Message']
+        sns_message = record['Sns']['Message']
     # todo: parse the SNS message string as JSON to get the S3 event
+        parsed = json.loads(sns_message)
     # todo: loop through the S3 event's 'Records'
-    # todo: extract bucket name from s3_record['s3']['bucket']['name']
+        for s3_record in parsed['Records']:
+            # todo: extract bucket name from s3_record['s3']['bucket']['name']
+            bucket = s3_record['s3']['bucket']['name']
     # todo: extract object key from s3_record['s3']['object']['key']
+            key = s3_record['s3']['object']['key']
     # todo: use is_valid_image() to check the file extension
     # todo: if valid:
+            if is_valid_image(key):
+                print(f"[VALID] {key} is a valid image file")
+                filename = key.split('/')[-1]
+                s3.copy_object(Bucket=bucket, Key=f"processed/valid/{filename}",
+                               CopySource={'Bucket': bucket, 'Key': key})
+            else:
+                print(f"[INVALID] {key} is not a valid image type")
+                raise ValueError
     #         - print the [VALID] message: print(f"[VALID] {key} is a valid image file")
     #         - get the filename from the key (e.g. "uploads/test.jpg" -> "test.jpg")
     #           hint: use key.split('/')[-1]
